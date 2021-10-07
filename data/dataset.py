@@ -73,3 +73,17 @@ class Dataset_Custom(Dataset):
         img_tensor = self.totensor(image=img)["image"]
         return img_tensor
 
+class Dataset_Custom_3D(Dataset_Custom):
+    def __init__(self,cfg, mode='train'):
+        super(Dataset_Custom_3D, self).__init__(cfg, mode)
+
+    def __len__(self):
+        if self.mode == "train":
+            return len(self.train_df)
+        elif self.mode == "valid":
+            return len(self.valid_df)
+        elif self.mode == "test":
+            return len(self.test_df)
+    
+    def _load_study(self, study_df):
+        
