@@ -1,0 +1,25 @@
+import cv2
+cv2.setNumThreads(0)
+cv2.ocl.setUseOpenCL(False)
+import albumentations as A
+from albumentations import pytorch
+import numpy as np
+import os
+import pandas as pd
+import random
+from torch.utils.data import Dataset
+import torch
+
+
+class Dataset_Custom(Dataset):
+	def __init__(self, cfg, mode="train"):
+		self.cfg = cfg
+		self.CLASSES = self.cfg.CONST.LABELS
+		self.mode = mode
+
+		self.train_df=pd.read_pickle( self.cfg.DIRS.TRAIN_DF)
+		self.valid_df=pd.read_pickle(self.cfg.DIRS.VALID_DF)
+		self.test_df=pd.read_pickle(self.cfg.DIRS.TEST_DF)
+
+		if self.mode = "train":
+			

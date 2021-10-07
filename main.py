@@ -27,18 +27,19 @@ def adj_slices_sampler(nslices, l):
 if __name__ == "__main__":
 	df = pd.read_pickle("dataset/val.pkl")
 	#df = df["class"]
-	df["value"] = 1
+	#df["value"] = 1
 	#df = df["class"]
-	df = df.groupby(["class"]).sum()
+	#df = df.groupby(["class"]).sum()
 	#print(df)
 	
 	#df = pd.DataFrame({'mass': [0.330, 4.87 , 5.97],
         #           'radius': [2439.7, 6051.8, 6378.1]},
         #          index=['Mercury', 'Venus', 'Earth'])
 	#plot = df.plot.pie(y='mass', figsize=(5, 5))
-	plt.figure(figsize=(8,8))
+	#plt.figure(figsize=(8,8))
 	#ax1 = plt.subplot(121, aspect='equal')
-	df.plot(kind='pie', y='value',autopct='%1.1f%%', 
-	startangle=90, shadow=False, labels=['NonViolence','Violence'],
- 	legend = False, fontsize=14)
-	plt.show()
+	#df.plot(kind='pie', y='value',autopct='%1.1f%%', 
+	#startangle=90, shadow=False, labels=['NonViolence','Violence'],
+ 	#legend = False, fontsize=14)
+	#plt.show()
+	print(df.loc[0])
