@@ -86,4 +86,4 @@ class Dataset_Custom_3D(Dataset_Custom):
             return len(self.test_df)
     
     def _load_study(self, study_df):
-        
+        pass
