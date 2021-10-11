@@ -73,9 +73,10 @@ class Dataset_Custom(Dataset):
         img_tensor = self.totensor(image=img)["image"]
         return img_tensor
 
-class Dataset_Custom_3D(Dataset_Custom):
+class Dataset_Custom_3d(Dataset_Custom):
+
     def __init__(self,cfg, mode='train'):
-        super(Dataset_Custom_3D, self).__init__(cfg, mode)
+        super(Dataset_Custom_3d, self).__init__(cfg, mode)
 
     def __len__(self):
         if self.mode == "train":
@@ -85,5 +86,31 @@ class Dataset_Custom_3D(Dataset_Custom):
         elif self.mode == "test":
             return len(self.test_df)
     
-    def _load_study(self, study_df):
+    def _load_study(self,data_df, idx):
+        data = data_df.iloc[idx]
+        img_names = data["images"]
+        imgs = [self._load_img(img_path) for img_path in img_names]
+        imgs = torch.stack(imgs)
+        labels = data["class"]
+
+        if self.mode == "train" or self.mode == "valid":
+            return imgs, torch.from_numpy(labels).type('torch.FloatTensor')
+
+        elif self.mode == "test":
+            return imgs, img_names.tolist()
+
+    def __getitem__(self, idx):
+        if self.mode == "train":
+            return self._load_study(self.train_df,idx)
+        elif self.mode == "valid":
+            return self._load_study(self.valid_df,idx)
+        elif self.mode == "test":
+            return self._load_study(self.test_df,idx)
+
+class Dataset_Custom_2d(Dataset_Custom):
+
+    def __init__(self,cfg, mode='train'):
+        super(Dataset_Custom_2d, self).__init(cfg, mode)
+    
+    def __getitem__(self, idx):
         pass
