@@ -7,6 +7,9 @@ import numpy as np
 from albumentations import pytorch
 import albumentations as A
 import cv2
+from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import OneHotEncoder
+
 cv2.setNumThreads(0)
 cv2.ocl.setUseOpenCL(False)
 
@@ -62,7 +65,20 @@ class Dataset_Custom(Dataset):
                     A.NoOp()
                 ])
             ])
+        self.label_one_hot = self._label_2_one_hot()
 
+    def _label_2_one_hot(self):
+        labels = self.test_df["class"].unique().tolist()
+        labels = np.array(labels)
+        self.label_encoder = LabelEncoder()
+        integer_encoded = self.label_encoder.fit_transform(labels)
+        onehot_encoder = OneHotEncoder(sparse=False)
+        integer_encoded = integer_encoded.reshape(len(integer_encoded), 1)
+        onehot_encoded = onehot_encoder.fit_transform(integer_encoded)
+        dict_labels ={}
+        for (i,label) in enumerate(labels):
+            dict_labels[label]= onehot_encoded[i]
+        return dict_labels
     def _load_img(self, file_path):
         img = cv2.imread(file_path, cv2.COLOR_BGR2RGB)
 
@@ -92,7 +108,7 @@ class Dataset_Custom_3d(Dataset_Custom):
         imgs = [self._load_img(img_path) for img_path in img_names]
         imgs = torch.stack(imgs)
         labels = data["class"]
-
+        labels = self.label_one_hot[labels]
         if self.mode == "train" or self.mode == "valid":
             return imgs, torch.from_numpy(labels).type('torch.FloatTensor')
 
