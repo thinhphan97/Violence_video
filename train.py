@@ -1,11 +1,21 @@
 import argparse
+import os
 from src.utils import *
 from tqdm import tqdm
 import apex
 from apex import amp
 import torch
 import torch.nn as nn
+from torch.utils.data import DataLoader, Subset
+
 from sklearn.metrics import roc_auc_score, log_loss
+import numpy as np
+import pandas as pd
+
+from src.solver import make_lr_scheduler, make_optimizer
+from src.data import Dataset_Custom_3d
+from src.modeling import WeightedBCEWithLogitsLoss
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -34,8 +44,30 @@ def parse_args():
 def build_model(cfg):
     pass
 def test_model(_print, cfg, model, test_loader):
-    pass
+    model.eval()
+
+    ids = []
+    probs = []
+    tbar = tqdm(test_loader)
+
+    with torch.no_grad():
+        for i, (image, id_code) in enumerate(tbar):
+            image = image.cuda()
+            id_code = list(*zip(*id_code))
+            bsize, seq_len, c, h, w = image.size()
+            image = image.view(bsize * seq_len, c, h, w)
+            output = model(image, seq_len)
+            output = torch.softmax(output)
+            probs.append(output.cpu().numpy())
+            ids += id_code
+
+    probs = np.concatenate(probs, 0)
+    submit = pd.concat([pd.Series(ids), pd.DataFrame(probs)], axis=1)
+    submit.columns = ["image", "any", "abnormal", "normal"]
+    return submit
+
 def valid_model(_print, cfg, model, valid_loader, valid_criterion):
+    
     model.eval()
 
     preds = []
@@ -57,19 +89,16 @@ def valid_model(_print, cfg, model, valid_loader, valid_criterion):
     loss_tensor = valid_criterion(preds, targets)
     val_loss = loss_tensor.sum() / valid_criterion.class_weights.sum()
     any_loss = loss_tensor[0]
-    intraparenchymal_loss = loss_tensor[1]
-    intraventricular_loss = loss_tensor[2]
-    subarachnoid_loss = loss_tensor[3]
-    subdural_loss = loss_tensor[4]
-    epidural_loss = loss_tensor[5]
-    _print("Val. loss: %.5f - any: %.3f - intraparenchymal: %.3f - intraventricular: %.3f - subarachnoid: %.3f - subdural: %.3f - epidural: %.3f" % (
+    abnormal_loss = loss_tensor[1]
+    normal_loss = loss_tensor[2]
+
+    _print("Val. loss: %.5f - any: %.3f - adnormal: %.3f - normal: %.3f" % (
         val_loss, any_loss,
-        intraparenchymal_loss, intraventricular_loss,
-        subarachnoid_loss, subdural_loss, epidural_loss))
+        abnormal_loss, normal_loss))
     # record AUC
     auc = roc_auc_score(targets[:, 1:].numpy(), preds[:, 1:].numpy(), average=None)
-    _print("Val. AUC - intraparenchymal: %.3f - intraventricular: %.3f - subarachnoid: %.3f - subdural: %.3f - epidural: %.3f" % (
-            auc[0], auc[1], auc[2], auc[3], auc[4]))
+    _print("Val. AUC - abnormal: %.3f - normal: %.3f" % (
+            auc[0], auc[1]))
     return val_loss
 
 def train_loop(_print, cfg, model, train_loader, criterion, valid_loader, valid_criterion, optimizer, scheduler, start_epoch, best_metric):
@@ -88,7 +117,7 @@ def train_loop(_print, cfg, model, train_loader, criterion, valid_loader, valid_
             target = target.view(-1, target.size(-1))
 
             output = model(image, seq_len)
-            
+            loss = criterion(output, target)
             # gradient accumulation
             loss = loss / cfg.OPT.GD_STEPS
 
@@ -122,4 +151,68 @@ def train_loop(_print, cfg, model, train_loader, criterion, valid_loader, valid_
         }, is_best, root=cfg.DIRS.WEIGHTS, filename=f"{cfg.EXP}.pth")
 
 def main(args, cfg):
-    pass
+    logging = setup_logger(args.mode, cfg.DIRS.LOGS, 0, filename=f"{cfg.EXP}.txt")
+
+    # Declare variables
+    start_epoch = 0
+    best_metric = 10.
+
+    # Create model
+    model = build_model(cfg)
+
+    # Define Loss and Optimizer
+    train_criterion = nn.BCEWithLogitsLoss(weight=torch.tensor(cfg.LOSS.WEIGHTS))
+    valid_criterion = WeightedBCEWithLogitsLoss(class_weights=torch.tensor(cfg.LOSS.WEIGHTS), reduction='none')
+    optimizer = make_optimizer(cfg, model)
+
+    # CUDA & Mixed Precision
+    if cfg.SYSTEM.CUDA:
+        model = model.cuda()
+        train_criterion = train_criterion.cuda()
+
+    if cfg.SYSTEM.FP16:
+        model, optimizer = amp.initialize(models=model, optimizers=optimizer,
+                                          opt_level=cfg.SYSTEM.OPT_L,
+                                          keep_batchnorm_fp32=(True if cfg.SYSTEM.OPT_L == "O2" else None))
+
+    # Load checkpoint
+    if args.load != "":
+        if os.path.isfile(args.load):
+            logging.info(f"=> loading checkpoint {args.load}")
+            ckpt = torch.load(args.load, "cpu")
+            model.load_state_dict(ckpt.pop('state_dict'))
+            if not args.finetune:
+                logging.info("resuming optimizer ...")
+                optimizer.load_state_dict(ckpt.pop('optimizer'))
+                start_epoch, best_metric = ckpt['epoch'], ckpt['best_metric']
+            logging.info(f"=> loaded checkpoint '{args.load}' (epoch {ckpt['epoch']}, best_metric: {ckpt['best_metric']})")
+        else:
+            logging.info(f"=> no checkpoint found at '{args.load}'")
+    DataSet = Dataset_Custom_3d
+    train_ds = DataSet(cfg, mode="train")
+    valid_ds = DataSet(cfg, mode="valid")
+    test_ds = DataSet(cfg, mode="test")
+    if cfg.DEBUG:
+        train_ds = Subset(train_ds, np.random.choice(np.arange(len(train_ds)), 50))
+        valid_ds = Subset(valid_ds, np.random.choice(np.arange(len(valid_ds)), 20))
+
+    train_loader = DataLoader(train_ds, cfg.TRAIN.BATCH_SIZE,
+                            pin_memory=False, shuffle=True,
+                            drop_last=False, num_workers=cfg.SYSTEM.NUM_WORKERS)
+    valid_loader = DataLoader(valid_ds, 1,
+                            pin_memory=False, shuffle=False,
+                            drop_last=False, num_workers=cfg.SYSTEM.NUM_WORKERS)
+    test_loader = DataLoader(test_ds, 1, pin_memory=False, shuffle=False,
+                            drop_last=False, num_workers=cfg.SYSTEM.NUM_WORKERS)
+
+    scheduler = make_lr_scheduler(cfg, optimizer, train_loader)
+    if args.mode == "train":
+        train_loop(logging.info, cfg, model, \
+                train_loader, train_criterion, valid_loader, valid_criterion, \
+                optimizer, scheduler, start_epoch, best_metric)
+    elif args.mode == "valid":
+        valid_model(logging.info, cfg, model, valid_loader, valid_criterion)
+    else:
+        submission = test_model(logging.info, cfg, model, test_loader)
+        sub_fpath = os.path.join(cfg.DIRS.OUTPUTS, f"{cfg.EXP}.csv")
+        submission.to_csv(sub_fpath, index=False)
