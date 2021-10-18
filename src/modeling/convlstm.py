@@ -185,9 +185,25 @@ class ConvLSTM(nn.Module):
         if not isinstance(param, list):
             param = [param] * num_layers
         return param
+class ConvLSTM3D(ConvLSTM):
+    def __init__(self,cfg):
+        super(ConvLSTM3D, self).__init__(cfg)
+        self.num_classes = cfg.MODEL.NUM_CLASSES
+        self.feature = ConvLSTM(cfg)
+        self.recurrent_features = cfg.DATA.IMG_SIZE*cfg.DATA.IMG_SIZE*cfg.CONVLSTM.hidden_dim[-1]
+        self.fc = nn.Linear(self.recurrent_features, self.num_classes)
+        nn.init.zeros_(self.fc.bias.data)
+
+    def forward(self, input_tensor):
+        _,x = self.feature(input_tensor)
+        x = x[0][0]
+        x = torch.flatten(x,1)
+        x = self.fc(x)
+        return x
 
 if __name__ == "__main__":
     from yacs.config import CfgNode as CN
+    import numpy as np
     cfg = CN()
     cfg.CONVLSTM = CN()
     cfg.CONVLSTM.input_dim =  3
@@ -197,9 +213,15 @@ if __name__ == "__main__":
     cfg.CONVLSTM.batch_first = True 
     cfg.CONVLSTM.bias = True 
     cfg.CONVLSTM.return_all_layers = False
+    cfg.MODEL = CN()
+    cfg.MODEL.NUM_CLASSES = 2
+    cfg.DATA = CN()
+    cfg.DATA.IMG_SIZE = 128
     print(cfg)
     x = torch.rand((32, 10, 3, 128, 128))
-    convlstm = ConvLSTM(cfg)
-    _, last_states = convlstm(x)
-    h = last_states[0][0]
-    print(h.shape)
+    # convlstm = ConvLSTM(cfg)
+    convlstm3d = ConvLSTM3D(cfg)
+    last_states = convlstm3d(x)
+    h = last_states
+    print(h.size())
+    print(h)
