@@ -83,25 +83,26 @@ class ConvLSTM(nn.Module):
         >> h = last_states[0][0]  # 0 for layer index, 0 for h index
     """
 
-    def __init__(self, input_dim, hidden_dim, kernel_size, num_layers,
-                 batch_first=False, bias=True, return_all_layers=False):
+    # def __init__(self, input_dim, hidden_dim, kernel_size, num_layers,
+    #              batch_first=False, bias=True, return_all_layers=False):
+    def __init__(self,cfg):
         super(ConvLSTM, self).__init__()
 
-        self._check_kernel_size_consistency(kernel_size)
+        self._check_kernel_size_consistency(cfg.CONVLSTM.kernel_size)
 
         # Make sure that both `kernel_size` and `hidden_dim` are lists having len == num_layers
-        kernel_size = self._extend_for_multilayer(kernel_size, num_layers)
-        hidden_dim = self._extend_for_multilayer(hidden_dim, num_layers)
-        if not len(kernel_size) == len(hidden_dim) == num_layers:
+        kernel_size = self._extend_for_multilayer(cfg.CONVLSTM.kernel_size, cfg.CONVLSTM.num_layers)
+        hidden_dim = self._extend_for_multilayer(cfg.CONVLSTM.hidden_dim, cfg.CONVLSTM.num_layers)
+        if not len(kernel_size) == len(hidden_dim) == cfg.CONVLSTM.num_layers:
             raise ValueError('Inconsistent list length.')
 
-        self.input_dim = input_dim
-        self.hidden_dim = hidden_dim
-        self.kernel_size = kernel_size
-        self.num_layers = num_layers
-        self.batch_first = batch_first
-        self.bias = bias
-        self.return_all_layers = return_all_layers
+        self.input_dim = cfg.CONVLSTM.input_dim
+        self.hidden_dim = cfg.CONVLSTM.hidden_dim
+        self.kernel_size = cfg.CONVLSTM.kernel_size
+        self.num_layers = cfg.CONVLSTM.num_layers
+        self.batch_first = cfg.CONVLSTM.batch_first
+        self.bias = cfg.CONVLSTM.bias
+        self.return_all_layers = cfg.CONVLSTM.return_all_layers
 
         cell_list = []
         for i in range(0, self.num_layers):
@@ -184,3 +185,21 @@ class ConvLSTM(nn.Module):
         if not isinstance(param, list):
             param = [param] * num_layers
         return param
+
+if __name__ == "__main__":
+    from yacs.config import CfgNode as CN
+    cfg = CN()
+    cfg.CONVLSTM = CN()
+    cfg.CONVLSTM.input_dim =  3
+    cfg.CONVLSTM.hidden_dim = [16]
+    cfg.CONVLSTM.kernel_size = [(3, 3)]
+    cfg.CONVLSTM.num_layers = 1
+    cfg.CONVLSTM.batch_first = True 
+    cfg.CONVLSTM.bias = True 
+    cfg.CONVLSTM.return_all_layers = False
+    print(cfg)
+    x = torch.rand((32, 10, 3, 128, 128))
+    convlstm = ConvLSTM(cfg)
+    _, last_states = convlstm(x)
+    h = last_states[0][0]
+    print(h.shape)
