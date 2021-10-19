@@ -2,8 +2,8 @@ import argparse
 import os
 from src.utils import *
 from tqdm import tqdm
-import apex
-from apex import amp
+# import apex
+# from apex import amp
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, Subset
@@ -15,7 +15,7 @@ import pandas as pd
 from src.solver import make_lr_scheduler, make_optimizer
 from src.data import Dataset_Custom_3d
 from src.modeling import WeightedBCEWithLogitsLoss
-
+from src.config import get_cfg
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -63,7 +63,7 @@ def test_model(_print, cfg, model, test_loader):
 
     probs = np.concatenate(probs, 0)
     submit = pd.concat([pd.Series(ids), pd.DataFrame(probs)], axis=1)
-    submit.columns = ["image", "any", "abnormal", "normal"]
+    submit.columns = ["image", "abnormal", "normal"]
     return submit
 
 def valid_model(_print, cfg, model, valid_loader, valid_criterion):
@@ -121,11 +121,11 @@ def train_loop(_print, cfg, model, train_loader, criterion, valid_loader, valid_
             # gradient accumulation
             loss = loss / cfg.OPT.GD_STEPS
 
-            if cfg.SYSTEM.FP16:
-                with amp.scale_loss(loss, optimizer) as scaled_loss:
-                    scaled_loss.backward()
-            else:
-                loss.backward()
+            # if cfg.SYSTEM.FP16:
+            #     with amp.scale_loss(loss, optimizer) as scaled_loss:
+            #         scaled_loss.backward()
+            # else:
+            loss.backward()
 
             if (i + 1) % cfg.OPT.GD_STEPS == 0:
                 optimizer.step()
@@ -170,10 +170,10 @@ def main(args, cfg):
         model = model.cuda()
         train_criterion = train_criterion.cuda()
 
-    if cfg.SYSTEM.FP16:
-        model, optimizer = amp.initialize(models=model, optimizers=optimizer,
-                                          opt_level=cfg.SYSTEM.OPT_L,
-                                          keep_batchnorm_fp32=(True if cfg.SYSTEM.OPT_L == "O2" else None))
+    # if cfg.SYSTEM.FP16:
+    #     model, optimizer = amp.initialize(models=model, optimizers=optimizer,
+    #                                       opt_level=cfg.SYSTEM.OPT_L,
+    #                                       keep_batchnorm_fp32=(True if cfg.SYSTEM.OPT_L == "O2" else None))
 
     # Load checkpoint
     if args.load != "":
@@ -216,3 +216,20 @@ def main(args, cfg):
         submission = test_model(logging.info, cfg, model, test_loader)
         sub_fpath = os.path.join(cfg.DIRS.OUTPUTS, f"{cfg.EXP}.csv")
         submission.to_csv(sub_fpath, index=False)
+if __name__ == "__main__":
+    args = parse_args()
+    cfg = get_cfg()
+
+    if args.config != "":
+        cfg.merge_from_file(args.config)
+    if args.debug:
+        opts = ["DEBUG", True, "TRAIN.EPOCHS", 2]
+        cfg.merge_from_list(opts)
+    cfg.freeze()
+    # make dirs
+    for _dir in ["WEIGHTS", "OUTPUTS", "LOGS"]:
+        if not os.path.isdir(cfg.DIRS[_dir]):
+            os.mkdir(cfg.DIRS[_dir])
+    # seed, run
+    setup_determinism(cfg.SYSTEM.SEED)
+    main(args, cfg)

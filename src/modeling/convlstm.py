@@ -88,21 +88,21 @@ class ConvLSTM(nn.Module):
     def __init__(self,cfg):
         super(ConvLSTM, self).__init__()
 
-        self._check_kernel_size_consistency(cfg.CONVLSTM.kernel_size)
+        self._check_kernel_size_consistency(cfg.MODEL.CONVLSTM.kernel_size)
 
         # Make sure that both `kernel_size` and `hidden_dim` are lists having len == num_layers
-        kernel_size = self._extend_for_multilayer(cfg.CONVLSTM.kernel_size, cfg.CONVLSTM.num_layers)
-        hidden_dim = self._extend_for_multilayer(cfg.CONVLSTM.hidden_dim, cfg.CONVLSTM.num_layers)
-        if not len(kernel_size) == len(hidden_dim) == cfg.CONVLSTM.num_layers:
+        kernel_size = self._extend_for_multilayer(cfg.MODEL.CONVLSTM.kernel_size, cfg.MODEL.CONVLSTM.num_layers)
+        hidden_dim = self._extend_for_multilayer(cfg.MODEL.CONVLSTM.hidden_dim, cfg.MODEL.CONVLSTM.num_layers)
+        if not len(kernel_size) == len(hidden_dim) == cfg.MODEL.CONVLSTM.num_layers:
             raise ValueError('Inconsistent list length.')
 
-        self.input_dim = cfg.CONVLSTM.input_dim
-        self.hidden_dim = cfg.CONVLSTM.hidden_dim
-        self.kernel_size = cfg.CONVLSTM.kernel_size
-        self.num_layers = cfg.CONVLSTM.num_layers
-        self.batch_first = cfg.CONVLSTM.batch_first
-        self.bias = cfg.CONVLSTM.bias
-        self.return_all_layers = cfg.CONVLSTM.return_all_layers
+        self.input_dim = cfg.DATA.INP_CHANNEL
+        self.hidden_dim = cfg.MODEL.CONVLSTM.hidden_dim
+        self.kernel_size = cfg.MODEL.CONVLSTM.kernel_size
+        self.num_layers = cfg.MODEL.CONVLSTM.num_layers
+        self.batch_first = cfg.MODEL.CONVLSTM.batch_first
+        self.bias = cfg.MODEL.CONVLSTM.bias
+        self.return_all_layers = cfg.MODEL.CONVLSTM.return_all_layers
 
         cell_list = []
         for i in range(0, self.num_layers):
@@ -190,13 +190,13 @@ class ConvLSTM3D(ConvLSTM):
         super(ConvLSTM3D, self).__init__(cfg)
         self.num_classes = cfg.MODEL.NUM_CLASSES
         self.feature = ConvLSTM(cfg)
-        self.recurrent_features = cfg.DATA.IMG_SIZE*cfg.DATA.IMG_SIZE*cfg.CONVLSTM.hidden_dim[-1]
+        self.recurrent_features = cfg.DATA.IMG_SIZE*cfg.DATA.IMG_SIZE*cfg.MODEL.CONVLSTM.hidden_dim[-1]
         self.fc = nn.Linear(self.recurrent_features, self.num_classes)
         nn.init.zeros_(self.fc.bias.data)
-        self.input_dim = cfg.CONVLSTM.input_dim
-        self.IMG_SIZE = cfg.DATA.IMG_SIZE
+        self.input_dim = cfg.DATA.INP_CHANNEL
+        self.img_size = cfg.DATA.IMG_SIZE
     def forward(self, input_tensor, seq_len):
-        x = input_tensor.reshape(-1, seq_len, self.input_dim, self.IMG_SIZE, self.IMG_SIZE )
+        x = input_tensor.reshape(-1, seq_len, self.input_dim, self.img_size, self.img_size )
         _,x = self.feature(x)
         x = x[0][0]
         x = torch.flatten(x,1)
@@ -205,21 +205,25 @@ class ConvLSTM3D(ConvLSTM):
 
 if __name__ == "__main__":
     from yacs.config import CfgNode as CN
-    import numpy as np
+
     cfg = CN()
-    cfg.CONVLSTM = CN()
-    cfg.CONVLSTM.input_dim =  3
-    cfg.CONVLSTM.hidden_dim = [16]
-    cfg.CONVLSTM.kernel_size = [(3, 3)]
-    cfg.CONVLSTM.num_layers = 1
-    cfg.CONVLSTM.batch_first = True 
-    cfg.CONVLSTM.bias = True 
-    cfg.CONVLSTM.return_all_layers = False
     cfg.MODEL = CN()
+    cfg.MODEL.CONVLSTM = CN()
+    cfg.MODEL.CONVLSTM.input_dim =  3
+    cfg.MODEL.CONVLSTM.hidden_dim = [16]
+    cfg.MODEL.CONVLSTM.kernel_size = [(3, 3)]
+    cfg.MODEL.CONVLSTM.num_layers = 1
+    cfg.MODEL.CONVLSTM.batch_first = True 
+    cfg.MODEL.CONVLSTM.bias = True 
+    cfg.MODEL.CONVLSTM.return_all_layers = False
     cfg.MODEL.NUM_CLASSES = 2
     cfg.DATA = CN()
+    cfg.DATA.INP_CHANNEL = 3
     cfg.DATA.IMG_SIZE = 128
+
+    
     print(cfg)
+
     x = torch.rand((32, 10, 3, 128, 128))
     bsize, seq_len, c, h, w = x.size()
     x = x.view(bsize * seq_len, c, h, w)

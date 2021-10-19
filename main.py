@@ -1,8 +1,8 @@
 
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-from src.data import Dataset_Custom_3d
+# import numpy as np
+# import pandas as pd
+# import matplotlib.pyplot as plt
+# from src.data import Dataset_Custom_3d
 
 if __name__ == "__main__":
 	# df = pd.read_pickle("dataset/val.pkl")
@@ -23,4 +23,20 @@ if __name__ == "__main__":
  	# #legend = False, fontsize=14)
 	# #plt.show()
 	# print(df.loc[0])
-	pass
+	from src.config import get_cfg
+	from src.modeling import ConvLSTM3D
+	import torch
+	cfg = get_cfg()
+
+	print(cfg)
+	
+	x = torch.rand((32, 10, 3, 128, 128))
+	bsize, seq_len, c, h, w = x.size()
+	x = x.view(bsize * seq_len, c, h, w)
+    
+    # convlstm = ConvLSTM(cfg)
+	convlstm3d = ConvLSTM3D(cfg)
+	last_states = convlstm3d(x, seq_len)
+	h = last_states
+	print(h.size())
+	print(h)

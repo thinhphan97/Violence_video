@@ -8,73 +8,73 @@ import os
 import torchvision
 import pretrainedmodels
 import timm
-from timm.models import Conv2dSame
+# from timm.models import Conv2dSame
 
 
-class EfficientNet(nn.Module):
-    """
-    EfficientNet B0-B7.
-    Args:
-        cfg (CfgNode): encoder configs
-    """
-    def __init__(self, cfg):
-        super(EfficientNet, self).__init__()
-        input_channels = cfg.DATA.INP_CHANNEL
-        model_name = cfg.MODEL.ENCODER.NAME
-        num_classes = cfg.MODEL.NUM_CLASSES
+# class EfficientNet(nn.Module):
+#     """
+#     EfficientNet B0-B7.
+#     Args:
+#         cfg (CfgNode): encoder configs
+#     """
+#     def __init__(self, cfg):
+#         super(EfficientNet, self).__init__()
+#         input_channels = cfg.DATA.INP_CHANNEL
+#         model_name = cfg.MODEL.ENCODER.NAME
+#         num_classes = cfg.MODEL.NUM_CLASSES
 
-        backbone = timm.create_model(model_name, pretrained=True)
-        in_features = backbone.conv_head.out_channels
+#         backbone = timm.create_model(model_name, pretrained=True)
+#         in_features = backbone.conv_head.out_channels
 
-        self.conv_stem = backbone.conv_stem
-        self.bn1 = backbone.bn1
-        self.act_fn = backbone.act_fn
-        for i in range(len((backbone.blocks))):
-            setattr(self, "block{}".format(str(i)), backbone.blocks[i])
-        self.conv_head = backbone.conv_head
-        self.bn2 = backbone.bn2
-        self.global_pool = backbone.global_pool
-        self.drop_rate = backbone.drop_rate
+#         self.conv_stem = backbone.conv_stem
+#         self.bn1 = backbone.bn1
+#         self.act_fn = backbone.act_fn
+#         for i in range(len((backbone.blocks))):
+#             setattr(self, "block{}".format(str(i)), backbone.blocks[i])
+#         self.conv_head = backbone.conv_head
+#         self.bn2 = backbone.bn2
+#         self.global_pool = backbone.global_pool
+#         self.drop_rate = backbone.drop_rate
 
-        del backbone
+#         del backbone
 
-        if input_channels != 3:
-            old_conv_weight = self.conv_stem.weight
-            new_conv = Conv2dSame(input_channels, 48, 3, 2, bias=False)
-            with torch.no_grad():
-                new_conv.weight = nn.Parameter(torch.stack(
-                    [torch.mean(old_conv_weight, 1)] * input_channels, 1))
-            self.conv_stem = new_conv
+#         if input_channels != 3:
+#             old_conv_weight = self.conv_stem.weight
+#             new_conv = Conv2dSame(input_channels, 48, 3, 2, bias=False)
+#             with torch.no_grad():
+#                 new_conv.weight = nn.Parameter(torch.stack(
+#                     [torch.mean(old_conv_weight, 1)] * input_channels, 1))
+#             self.conv_stem = new_conv
 
-        self.fc = nn.Linear(in_features, num_classes, bias=True)
-        nn.init.zeros_(self.fc.bias.data)
+#         self.fc = nn.Linear(in_features, num_classes, bias=True)
+#         nn.init.zeros_(self.fc.bias.data)
 
-    def _features(self, x):
-        x = self.conv_stem(x)
-        x = self.bn1(x)
-        x = self.act_fn(x, inplace=True)
-        x = self.block0(x)
-        x = self.block1(x)
-        x = self.block2(x)
-        x = self.block3(x)
-        x = self.block4(x); b4 = x
-        x = self.block5(x); b5 = x
-        x = self.block6(x)
-        if self.attn:
-            x = self.attn_block(x, b5)
-        x = self.conv_head(x)
-        x = self.bn2(x)
-        x = self.act_fn(x, inplace=True)
-        return b4, b5, x
+#     def _features(self, x):
+#         x = self.conv_stem(x)
+#         x = self.bn1(x)
+#         x = self.act_fn(x, inplace=True)
+#         x = self.block0(x)
+#         x = self.block1(x)
+#         x = self.block2(x)
+#         x = self.block3(x)
+#         x = self.block4(x); b4 = x
+#         x = self.block5(x); b5 = x
+#         x = self.block6(x)
+#         if self.attn:
+#             x = self.attn_block(x, b5)
+#         x = self.conv_head(x)
+#         x = self.bn2(x)
+#         x = self.act_fn(x, inplace=True)
+#         return b4, b5, x
 
-    def forward(self, x):
-        _, _, x = self._features(x)
-        x = self.global_pool(x)
-        x = torch.flatten(x, 1)
-        if self.drop_rate > 0.:
-            x = F.dropout(x, p=self.drop_rate, training=self.training)
-        x = self.fc(x)
-        return x
+#     def forward(self, x):
+#         _, _, x = self._features(x)
+#         x = self.global_pool(x)
+#         x = torch.flatten(x, 1)
+#         if self.drop_rate > 0.:
+#             x = F.dropout(x, p=self.drop_rate, training=self.training)
+#         x = self.fc(x)
+#         return x
 
 
 class ResNet(nn.Module):
@@ -210,19 +210,47 @@ class ResNet3D(ResNet):
         return x
 
 
-class EfficientNet3D(EfficientNet):
-    """
-    3D EfficientNet.
+# class EfficientNet3D(EfficientNet):
+#     """
+#     3D EfficientNet.
 
-    Args:
-        cfg (CfgNode): encoder and decoder configs.
-    """
-    def __init__(self, cfg):
-        super(EfficientNet3D, self).__init__(cfg)
-        del self.fc
-        self.decoder = RecurrentDecoder(cfg)
+#     Args:
+#         cfg (CfgNode): encoder and decoder configs.
+#     """
+#     def __init__(self, cfg):
+#         super(EfficientNet3D, self).__init__(cfg)
+#         del self.fc
+#         self.decoder = RecurrentDecoder(cfg)
 
-    def forward(self, x, seq_len):
-        _, _, x = self._features(x)
-        x = self.decoder(x, seq_len)
-        return x
+#     def forward(self, x, seq_len):
+#         _, _, x = self._features(x)
+#         x = self.decoder(x, seq_len)
+#         return x
+
+if __name__ == "__main__":
+    from yacs.config import CfgNode as CN
+    cfg = CN()
+    cfg.MODEL = CN()
+    cfg.MODEL.ENCODER = CN()
+    cfg.MODEL.ENCODER.NAME = "se_resnext50_32x4d"
+    cfg.MODEL.DECODER = CN()
+    cfg.MODEL.DECODER.NAME = "lstm"
+    cfg.MODEL.DECODER.NUM_LAYERS = 1
+    cfg.MODEL.DECODER.IN_FEATURES = 2048
+    cfg.MODEL.DECODER.HIDDEN_SIZE = 128
+    cfg.MODEL.DECODER.BIDIRECT = False
+    cfg.MODEL.DECODER.DROPOUT = 0.3
+    cfg.MODEL.NUM_CLASSES = 2
+    cfg.DATA = CN()
+    cfg.DATA.IMG_SIZE = 128
+    cfg.DATA.INP_CHANNEL = 3
+
+    model = ResNet3D(cfg)
+
+    x = torch.rand((32, 10, 3, 128, 128))
+    bsize, seq_len, c, h, w = x.size()
+    x = x.view(bsize * seq_len, c, h, w)
+
+    x = model(x,seq_len)
+
+    print(x.size())
