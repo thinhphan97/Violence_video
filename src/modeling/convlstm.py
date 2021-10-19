@@ -130,8 +130,8 @@ class ConvLSTM(nn.Module):
         if not self.batch_first:
             # (t, b, c, h, w) -> (b, t, c, h, w)
             input_tensor = input_tensor.permute(1, 0, 2, 3, 4)
-
         b, _, _, h, w = input_tensor.size()
+        
 
         # Implement stateful ConvLSTM
         if hidden_state is not None:
@@ -193,9 +193,11 @@ class ConvLSTM3D(ConvLSTM):
         self.recurrent_features = cfg.DATA.IMG_SIZE*cfg.DATA.IMG_SIZE*cfg.CONVLSTM.hidden_dim[-1]
         self.fc = nn.Linear(self.recurrent_features, self.num_classes)
         nn.init.zeros_(self.fc.bias.data)
-
-    def forward(self, input_tensor):
-        _,x = self.feature(input_tensor)
+        self.input_dim = cfg.CONVLSTM.input_dim
+        self.IMG_SIZE = cfg.DATA.IMG_SIZE
+    def forward(self, input_tensor, seq_len):
+        x = input_tensor.reshape(-1, seq_len, self.input_dim, self.IMG_SIZE, self.IMG_SIZE )
+        _,x = self.feature(x)
         x = x[0][0]
         x = torch.flatten(x,1)
         x = self.fc(x)
@@ -219,9 +221,13 @@ if __name__ == "__main__":
     cfg.DATA.IMG_SIZE = 128
     print(cfg)
     x = torch.rand((32, 10, 3, 128, 128))
+    bsize, seq_len, c, h, w = x.size()
+    x = x.view(bsize * seq_len, c, h, w)
+    
     # convlstm = ConvLSTM(cfg)
     convlstm3d = ConvLSTM3D(cfg)
-    last_states = convlstm3d(x)
+    last_states = convlstm3d(x, seq_len)
     h = last_states
     print(h.size())
     print(h)
+    
