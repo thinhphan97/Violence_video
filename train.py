@@ -2,8 +2,8 @@ import argparse
 import os
 from src.utils import *
 from tqdm import tqdm
-# import apex
-# from apex import amp
+import apex
+from apex import amp
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, Subset
@@ -121,11 +121,11 @@ def train_loop(_print, cfg, model, train_loader, criterion, valid_loader, valid_
             # gradient accumulation
             loss = loss / cfg.OPT.GD_STEPS
 
-            # if cfg.SYSTEM.FP16:
-            #     with amp.scale_loss(loss, optimizer) as scaled_loss:
-            #         scaled_loss.backward()
-            # else:
-            loss.backward()
+            if cfg.SYSTEM.FP16:
+                with amp.scale_loss(loss, optimizer) as scaled_loss:
+                    scaled_loss.backward()
+            else:
+                loss.backward()
 
             if (i + 1) % cfg.OPT.GD_STEPS == 0:
                 optimizer.step()
@@ -170,10 +170,10 @@ def main(args, cfg):
         model = model.cuda()
         train_criterion = train_criterion.cuda()
 
-    # if cfg.SYSTEM.FP16:
-    #     model, optimizer = amp.initialize(models=model, optimizers=optimizer,
-    #                                       opt_level=cfg.SYSTEM.OPT_L,
-    #                                       keep_batchnorm_fp32=(True if cfg.SYSTEM.OPT_L == "O2" else None))
+    if cfg.SYSTEM.FP16:
+        model, optimizer = amp.initialize(models=model, optimizers=optimizer,
+                                          opt_level=cfg.SYSTEM.OPT_L,
+                                          keep_batchnorm_fp32=(True if cfg.SYSTEM.OPT_L == "O2" else None))
 
     # Load checkpoint
     if args.load != "":
