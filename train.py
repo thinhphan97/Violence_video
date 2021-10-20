@@ -15,6 +15,7 @@ import pandas as pd
 from src.solver import make_lr_scheduler, make_optimizer
 from src.data import Dataset_Custom_3d
 from src.modeling import WeightedBCEWithLogitsLoss
+from src.modeling import ConvLSTM3D
 from src.config import get_cfg
 
 def parse_args():
@@ -41,8 +42,11 @@ def parse_args():
         args.mode = "test"
 
     return args
+    
 def build_model(cfg):
-    pass
+    model = ConvLSTM3D(cfg)
+    return model
+
 def test_model(_print, cfg, model, test_loader):
     model.eval()
 

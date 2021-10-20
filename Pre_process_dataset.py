@@ -4,7 +4,7 @@ import pandas as pd
 import os
 from sklearn.utils import shuffle
 
-def data_split(data_dir = "dataset/extract/", slice_sample = 10, stride=3):
+def data_split(data_dir = "dataset/extract/", slice_sample = 20, stride=3):
 	#data_dir = "dataset/extract/"
 	#stride = 2
 	#slice_sample = 10
@@ -12,7 +12,7 @@ def data_split(data_dir = "dataset/extract/", slice_sample = 10, stride=3):
 	result_dict["class"] = []
 	result_dict["images"] = []
 	result_dict["video_name"] = []
-	name_class = ["NonViolence", "Violence"]
+	name_class = ["abnormal", "normal"]
 	for Class in name_class:
 		name_folder = glob.glob(os.path.join(data_dir,Class)+"/*")
 		for folder in name_folder:
@@ -20,22 +20,21 @@ def data_split(data_dir = "dataset/extract/", slice_sample = 10, stride=3):
 			images = glob.glob(folder + "/*" )
 			images = sorted(images)
 			length = len(images)
-			image_result = []
+			images = [images[i].replace("\\","/") for i in range(length)]
 			for i in range(length-(slice_sample*stride -2)):
 				image_slice = []
 				for j in range(0,slice_sample*stride,stride):
 					image_slice.append(images[i+j])
 				result_dict["images"].append(image_slice)
 				result_dict["class"].append(Class)
-				result_dict["video_name"].append(folder.split("/")[3])
-				#print(len(image_slice))
-			#print(len(image_result))
-#			break
+				result_dict["video_name"].append(folder.split("/")[2])
 	return pd.DataFrame.from_dict(result_dict)
+
+
 def train_test_val_split(df, train_percent = 0.7, val_percent = 0.15 ):
 
-	NV_df = shuffle(df[df["class"]=="NonViolence"]).reset_index(drop=True)
-	V_df = shuffle(df[df["class"]=="Violence"]).reset_index(drop=True)
+	NV_df = shuffle(df[df["class"]=="abnormal"]).reset_index(drop=True)
+	V_df = shuffle(df[df["class"]=="normal"]).reset_index(drop=True)
 
 	train_NV_df = NV_df.sample(frac=train_percent, random_state = 200)
 	train_V_df = V_df.sample(frac=train_percent, random_state = 200)
@@ -59,5 +58,7 @@ def train_test_val_split(df, train_percent = 0.7, val_percent = 0.15 ):
 	test_df.to_pickle("dataset/test.pkl")
 	val_df.to_pickle("dataset/val.pkl")
 if __name__ == "__main__":
+	# data_split()
 	train_test_val_split(data_split())
-	print(pd.read_pickle("dataset/train.pkl"))
+	df = pd.read_pickle("dataset/train.pkl")
+	print(len(df["images"][1]))

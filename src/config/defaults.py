@@ -16,12 +16,9 @@ _C.SYSTEM.NUM_WORKERS = 8
 
 _C.DIRS = CN()
 _C.DIRS.DATA = "data/rsna/"
-_C.DIRS.TRAIN = "stage_1_train_images/"
-_C.DIRS.VALID = "stage_1_test_images/"
-_C.DIRS.TEST = "stage_2_test_images/"
-_C.DIRS.TRAIN_CSV = "stage_1_train_metadata.csv"
-_C.DIRS.VALID_CSV = "stage_1_test_metadata.csv"
-_C.DIRS.TEST_CSV = "stage_2_test_metadata.csv"
+_C.DIRS.TRAIN_DF = "dataset/train.pkl"
+_C.DIRS.VALID_DF = "dataset/val.pkl"
+_C.DIRS.TEST_DF = "dataset/test.pkl"
 _C.DIRS.WEIGHTS = "./weights/"
 _C.DIRS.OUTPUTS = "./outputs/"
 _C.DIRS.LOGS = "./logs/"
@@ -54,7 +51,7 @@ _C.OPT.WEIGHT_DECAY_BIAS = 0.0
 _C.OPT.EPSILON = 1e-3
 
 _C.LOSS = CN()
-_C.LOSS.WEIGHTS = [2., 1., 1., 1., 1., 1.]
+_C.LOSS.WEIGHTS = [1., 1.]
 
 _C.MODEL = CN()
 _C.MODEL.ENCODER = CN()
@@ -81,5 +78,5 @@ _C.MODEL.NUM_CLASSES = 2
 
 _C.CONST = CN()
 _C.CONST.LABELS = [
-  "Normal", "Abnormal"
+  "normal", "abnormal"
   ]

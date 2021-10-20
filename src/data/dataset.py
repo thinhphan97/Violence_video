@@ -22,9 +22,9 @@ class Dataset_Custom(Dataset):
         self.train_df = pd.read_pickle(self.cfg.DIRS.TRAIN_DF)
         self.valid_df = pd.read_pickle(self.cfg.DIRS.VALID_DF)
         self.test_df = pd.read_pickle(self.cfg.DIRS.TEST_DF)
-        self.totensor = pytorch.transforms.ToTensor(
-                        normalize={"mean": self.cfg.DATA.MEAN,
-                                    "std": self.cfg.DATA.STD})
+        self.totensor = pytorch.transforms.ToTensorV2()
+                        # normalize={"mean": self.cfg.DATA.MEAN,
+                        #             "std": self.cfg.DATA.STD})
         if self.mode == "train":
             self.train_aug = A.Compose([
                 A.RandomResizedCrop(cfg.DATA.IMG_SIZE, cfg.DATA.IMG_SIZE,
@@ -53,22 +53,22 @@ class Dataset_Custom(Dataset):
                         value=0,
                         p=1.),
                     A.NoOp()
-                ]),
-                A.OneOf([
-                    A.IAAAdditiveGaussianNoise(p=1.),
-                    A.GaussNoise(p=1.),
-                    A.NoOp()
-                ]),
-                A.OneOf([
-                    A.MedianBlur(blur_limit=3, p=1.),
-                    A.Blur(blur_limit=3, p=1.),
-                    A.NoOp()
                 ])
+                # A.OneOf([
+                #     A.IAAAdditiveGaussianNoise(p=1.),
+                #     A.GaussNoise(p=1.),
+                #     A.NoOp()
+                # ]),
+                # A.OneOf([
+                #     A.MedianBlur(blur_limit=3, p=1.),
+                #     A.Blur(blur_limit=3, p=1.),
+                #     A.NoOp()
+                # ])
             ])
         self.label_one_hot = self._label_2_one_hot()
 
     def _label_2_one_hot(self):
-        labels = self.test_df["class"].unique().tolist()
+        labels = self.CLASSES
         labels = np.array(labels)
         self.label_encoder = LabelEncoder()
         integer_encoded = self.label_encoder.fit_transform(labels)
@@ -79,6 +79,7 @@ class Dataset_Custom(Dataset):
         for (i,label) in enumerate(labels):
             dict_labels[label]= onehot_encoded[i]
         return dict_labels
+
     def _load_img(self, file_path):
         img = cv2.imread(file_path, cv2.COLOR_BGR2RGB)
 
@@ -87,7 +88,7 @@ class Dataset_Custom(Dataset):
 
         # Normalize by ImageNet statistics
         img_tensor = self.totensor(image=img)["image"]
-        return img_tensor
+        return img_tensor/255
 
 class Dataset_Custom_3d(Dataset_Custom):
 

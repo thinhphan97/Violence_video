@@ -61,6 +61,7 @@ venusian==3.0.0
 WebOb==1.8.7
 WTForms==2.3.3
 wtforms-recaptcha==0.3.2
+yacs==0.1.8
 zope.deprecation==4.4.0
 zope.interface==5.4.0
 zope.sqlalchemy==1.6
