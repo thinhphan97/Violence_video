@@ -99,7 +99,7 @@ def valid_model(_print, cfg, model, valid_loader, valid_criterion):
     _print("Val. loss: %.5f - adnormal: %.3f - normal: %.3f" % (
         val_loss, abnormal_loss, normal_loss))
     # record AUC
-    auc = roc_auc_score(targets[:, 1:].numpy(), preds[:, 1:].numpy(), average=None)
+    auc = roc_auc_score(targets[:, :].numpy(), preds[:, :].numpy(), average=None)
     _print("Val. AUC - abnormal: %.3f - normal: %.3f" % (
             auc[0], auc[1]))
     return val_loss
