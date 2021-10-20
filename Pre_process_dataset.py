@@ -20,7 +20,7 @@ def data_split(data_dir = "dataset/extract/", slice_sample = 20, stride=3):
 			images = glob.glob(folder + "/*" )
 			images = sorted(images)
 			length = len(images)
-			images = [images[i].replace("\\","/") for i in range(length)]
+			# images = [images[i].replace("\\","/") for i in range(length)]
 			for i in range(length-(slice_sample*stride -2)):
 				image_slice = []
 				for j in range(0,slice_sample*stride,stride):

@@ -5,7 +5,7 @@
 # from src.data import Dataset_Custom_3d
 
 if __name__ == "__main__":
-	# import pandas as pd
+	import pandas as pd
 	# import matplotlib.pyplot as plt
 	# import cv2
 
@@ -30,7 +30,7 @@ if __name__ == "__main__":
 	# print(img.shape)
 	# from src.config import get_cfg
 	# from src.modeling import ConvLSTM3D
-	# import torch
+	# # import torch
 	# cfg = get_cfg()
 
 	# print(cfg)
@@ -62,16 +62,29 @@ if __name__ == "__main__":
 	"normal", "abnormal"
 	]
 	cfg.TRAIN = CN()
-	cfg.TRAIN.BATCH_SIZE = 30
+	cfg.TRAIN.BATCH_SIZE = 4
 	Dataset = Dataset_Custom_3d
-	data = Dataset(cfg,mode='train')
-	train_loader = DataLoader(data, cfg.TRAIN.BATCH_SIZE,
+	data = Dataset(cfg,mode='test')
+	valid_loader = DataLoader(data, cfg.TRAIN.BATCH_SIZE,
                             pin_memory=False, shuffle=True,
                             drop_last=False, num_workers= 3)
-	tbar = tqdm(train_loader)
-	for i, (image, target) in enumerate(train_loader):
-		tbar.set_description(f"image shape: {image.shape}, target shape: {target.shape}")
+	tbar = tqdm(valid_loader)
+	for i, (image, target) in enumerate(tbar):
+		# tbar.set_description(f"image shape: {image.shape}, target shape: {target.shape}")
+		# bsize, seq_len, c, h, w = image.size()
+		# x = image.view(bsize * seq_len, c, h, w)
+		# last_states = convlstm3d(x, seq_len)
+		# print(last_states)
+		# if i == 5:
+		# 	break
+		print(image.size())
+		print(target.size())
+		break
+
 
 	# image, target = train_loader
 	# print(image.shape)
 	# print(target.shape)
+
+	# df = pd.read_pickle("dataset/val.pkl")
+	# print(df)

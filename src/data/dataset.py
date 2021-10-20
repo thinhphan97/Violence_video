@@ -27,8 +27,8 @@ class Dataset_Custom(Dataset):
                         #             "std": self.cfg.DATA.STD})
         if self.mode == "train":
             self.train_aug = A.Compose([
-                A.RandomResizedCrop(cfg.DATA.IMG_SIZE, cfg.DATA.IMG_SIZE,
-                                    interpolation=cv2.INTER_LINEAR, scale=(0.8, 1)),
+                # A.RandomResizedCrop(cfg.DATA.IMG_SIZE, cfg.DATA.IMG_SIZE,
+                #                     interpolation=cv2.INTER_LINEAR, scale=(0.8, 1)),
                 A.OneOf([
                     A.HorizontalFlip(p=1.),
                     A.VerticalFlip(p=1.),
@@ -82,7 +82,7 @@ class Dataset_Custom(Dataset):
 
     def _load_img(self, file_path):
         img = cv2.imread(file_path, cv2.COLOR_BGR2RGB)
-
+        img = cv2.resize(img, (self.cfg.DATA.IMG_SIZE,self.cfg.DATA.IMG_SIZE), interpolation = cv2.INTER_AREA)
         if self.mode == "train":
             img = self.train_aug(image=img)["image"]
 
@@ -114,7 +114,7 @@ class Dataset_Custom_3d(Dataset_Custom):
             return imgs, torch.from_numpy(labels).type('torch.FloatTensor')
 
         elif self.mode == "test":
-            return imgs, img_names.tolist()
+            return imgs, labels
 
     def __getitem__(self, idx):
         if self.mode == "train":

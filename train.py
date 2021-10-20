@@ -92,13 +92,12 @@ def valid_model(_print, cfg, model, valid_loader, valid_criterion):
     # record loss
     loss_tensor = valid_criterion(preds, targets)
     val_loss = loss_tensor.sum() / valid_criterion.class_weights.sum()
-    any_loss = loss_tensor[0]
-    abnormal_loss = loss_tensor[1]
-    normal_loss = loss_tensor[2]
+    abnormal_loss = loss_tensor[0]
+    normal_loss = loss_tensor[1]
+  
 
-    _print("Val. loss: %.5f - any: %.3f - adnormal: %.3f - normal: %.3f" % (
-        val_loss, any_loss,
-        abnormal_loss, normal_loss))
+    _print("Val. loss: %.5f - adnormal: %.3f - normal: %.3f" % (
+        val_loss, abnormal_loss, normal_loss))
     # record AUC
     auc = roc_auc_score(targets[:, 1:].numpy(), preds[:, 1:].numpy(), average=None)
     _print("Val. AUC - abnormal: %.3f - normal: %.3f" % (
