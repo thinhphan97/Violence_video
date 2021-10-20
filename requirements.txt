@@ -47,10 +47,10 @@ sklearn==0.0
 SQLAlchemy==1.4.25
 threadpoolctl==2.2.0
 tifffile==2021.8.30
-timm==0.4.12
-torch==1.9.1
-torchaudio==0.9.1
-torchvision==0.10.1
+# timm==0.4.12
+# torch==1.9.1
+# torchaudio==0.9.1
+# torchvision==0.10.1
 tqdm==4.62.3
 transaction==3.0.1
 translationstring==1.4
