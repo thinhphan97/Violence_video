@@ -31,7 +31,7 @@ def data_split(data_dir = "dataset/extract/", slice_sample = 20, stride=3):
 	return pd.DataFrame.from_dict(result_dict)
 
 
-def train_test_val_split(df, train_percent = 0.7, val_percent = 0.15 ):
+def train_test_val_split(df, train_percent = 0.8, val_percent = 0.15 ):
 
 	NV_df = shuffle(df[df["class"]=="abnormal"]).reset_index(drop=True)
 	V_df = shuffle(df[df["class"]=="normal"]).reset_index(drop=True)
