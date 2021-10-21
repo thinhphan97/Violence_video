@@ -189,17 +189,33 @@ class ConvLSTM3D(ConvLSTM):
     def __init__(self,cfg):
         super(ConvLSTM3D, self).__init__(cfg)
         self.num_classes = cfg.MODEL.NUM_CLASSES
-        self.feature = ConvLSTM(cfg)
-        self.recurrent_features = cfg.DATA.IMG_SIZE*cfg.DATA.IMG_SIZE*cfg.MODEL.CONVLSTM.hidden_dim[-1]
-        self.fc = nn.Linear(self.recurrent_features, self.num_classes)
-        nn.init.zeros_(self.fc.bias.data)
         self.input_dim = cfg.DATA.INP_CHANNEL
         self.img_size = cfg.DATA.IMG_SIZE
+        self.feature = ConvLSTM(cfg)
+        self.recurrent_features = cfg.DATA.IMG_SIZE*cfg.DATA.IMG_SIZE*cfg.MODEL.CONVLSTM.hidden_dim[-1]
+        self.fc = nn.Linear(cfg.MODEL.CONVLSTM.NODE_HIDDEN, self.num_classes)
+        self.fc1 = nn.Linear(in_features = 53824, out_features=cfg.MODEL.CONVLSTM.NODE_HIDDEN)
+        self.conv = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3)
+        self.maxpooling = nn.MaxPool2d(kernel_size=3,stride=2,padding=0)
+        self.conv1 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3)
+        self.maxpooling1 = nn.MaxPool2d(kernel_size=3,stride=2,padding=0)
+        self.sigmoid = nn.Sigmoid(inplace=True)
+        self.relu = nn.ReLU(inplace=True)
+        nn.init.zeros_(self.fc.bias.data)
+
     def forward(self, input_tensor, seq_len):
         x = input_tensor.reshape(-1, seq_len, self.input_dim, self.img_size, self.img_size )
         _,x = self.feature(x)
         x = x[0][0]
+        x = self.conv(x)
+        x = self.relu(x)
+        x = self.maxpooling(x)
+        x = self.conv1(x)
+        x = self.relu(x)
+        x = self.maxpooling1(x)
         x = torch.flatten(x,1)
+        x = self.fc1(x)
+        x = self.sigmoid(x)
         x = self.fc(x)
         return x
 
@@ -209,6 +225,7 @@ if __name__ == "__main__":
     cfg = CN()
     cfg.MODEL = CN()
     cfg.MODEL.CONVLSTM = CN()
+    cfg.MODEL.CONVLSTM.NODE_HIDDEN = 1024
     cfg.MODEL.CONVLSTM.input_dim =  3
     cfg.MODEL.CONVLSTM.hidden_dim = [16]
     cfg.MODEL.CONVLSTM.kernel_size = [(3, 3)]
