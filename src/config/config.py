@@ -14,6 +14,15 @@ def get_cfg():
 
     return _C.clone()
 
+def get_cfg_cnn_lstm():
+    """
+    Get a copy of the default config.
+    """
+    # Return a clone so that the defaults will not be altered
+    # This is for the "local variable" use pattern
+    from .cnn_lstm import _C
+
+    return _C.clone()
 
 def set_global_cfg(cfg):
     """

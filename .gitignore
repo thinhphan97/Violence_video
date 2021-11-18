@@ -1,3 +1,8 @@
 venv/
 dataset/
 __pycache__/
+test.py
+weights/
+image/
+visualize/
+out_video/

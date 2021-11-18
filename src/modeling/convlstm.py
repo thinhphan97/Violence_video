@@ -27,7 +27,7 @@ class ConvLSTMCell(nn.Module):
         self.kernel_size = kernel_size
         self.padding = kernel_size[0] // 2, kernel_size[1] // 2
         self.bias = bias
-
+        
         self.conv = nn.Conv2d(in_channels=self.input_dim + self.hidden_dim,
                               out_channels=4 * self.hidden_dim,
                               kernel_size=self.kernel_size,
@@ -96,7 +96,7 @@ class ConvLSTM(nn.Module):
         if not len(kernel_size) == len(hidden_dim) == cfg.MODEL.CONVLSTM.num_layers:
             raise ValueError('Inconsistent list length.')
 
-        self.input_dim = cfg.DATA.INP_CHANNEL
+        self.input_dim = cfg.MODEL.CONVLSTM.INP_CHANNEL
         self.hidden_dim = cfg.MODEL.CONVLSTM.hidden_dim
         self.kernel_size = cfg.MODEL.CONVLSTM.kernel_size
         self.num_layers = cfg.MODEL.CONVLSTM.num_layers
@@ -193,16 +193,16 @@ class ConvLSTM3D(ConvLSTM):
         self.img_size = cfg.DATA.IMG_SIZE
         self.feature = ConvLSTM(cfg)
         self.recurrent_features = cfg.DATA.IMG_SIZE*cfg.DATA.IMG_SIZE*cfg.MODEL.CONVLSTM.hidden_dim[-1]
-        self.fc = nn.Linear(cfg.MODEL.CONVLSTM.NODE_HIDDEN, self.num_classes)
-        self.fc1 = nn.Linear(in_features = 53824, out_features=cfg.MODEL.CONVLSTM.NODE_HIDDEN)
+        self.fc = nn.Linear(in_features = 56448, out_features=cfg.MODEL.CONVLSTM.NODE_HIDDEN)
+        self.fc1 = nn.Linear(cfg.MODEL.CONVLSTM.NODE_HIDDEN, self.num_classes)
         self.conv = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3)
-        self.maxpooling = nn.MaxPool2d(kernel_size=3,stride=2,padding=0)
-        self.conv1 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3)
-        self.maxpooling1 = nn.MaxPool2d(kernel_size=3,stride=2,padding=0)
-        self.sigmoid = nn.Sigmoid(inplace=True)
+        self.maxpooling = nn.MaxPool2d(kernel_size=3,stride=3,padding=0)
+        self.sigmoid = nn.Sigmoid()
         self.relu = nn.ReLU(inplace=True)
+        self.dropout = nn.Dropout(cfg.MODEL.CONVLSTM.DROPOUT)
         nn.init.zeros_(self.fc.bias.data)
-
+        nn.init.zeros_(self.fc1.bias.data)
+        
     def forward(self, input_tensor, seq_len):
         x = input_tensor.reshape(-1, seq_len, self.input_dim, self.img_size, self.img_size )
         _,x = self.feature(x)
@@ -210,13 +210,14 @@ class ConvLSTM3D(ConvLSTM):
         x = self.conv(x)
         x = self.relu(x)
         x = self.maxpooling(x)
-        x = self.conv1(x)
-        x = self.relu(x)
-        x = self.maxpooling1(x)
         x = torch.flatten(x,1)
+        # print(x.shape)
+        x = self.dropout(x)
+        x = self.fc(x)
+        x = self.relu(x)
+        x = self.dropout(x)
         x = self.fc1(x)
         x = self.sigmoid(x)
-        x = self.fc(x)
         return x
 
 if __name__ == "__main__":

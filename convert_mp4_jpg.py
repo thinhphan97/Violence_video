@@ -21,20 +21,15 @@ def read_mp4(link_save, link_file,cfg):
 def preprocess():
 	cfg = get_cfg()
 	os.makedirs("dataset/extract1",exist_ok=True)
-	list_folder = glob.glob("dataset/data/*")
-	for folder in list_folder:
-		# print(folder.replace("data","extract"))
-		# os.makedirs(folder.replace("data","extract"),exist_ok=True)
-		list_video = glob.glob(folder + "/*")
-		for link in list_video:
-			list_file  = glob.glob(link+"/*")
-			# print(link)
-			link_folder = link.split('/')[0]+"/extract1/"+link.split('/')[2]+"/"+link.split('/')[3]
-			os.makedirs(link_folder,exist_ok=True)
-			for  file  in  list_file:
-				# print(file)
-				link_save = link_folder + "/" + file.split('/')[4].split('.')[0]
-				os.makedirs(link_save,exist_ok=True)
-				read_mp4(link_save,file,cfg)
+	list_folder = glob.glob("dataset/data_stream/*")
+	for link in list_folder:
+		list_file  = glob.glob(link+"/*")
+		link_folder = link.split('/')[0]+"/extract1/"+link.split('/')[2]
+		os.makedirs(link_folder,exist_ok=True)
+		for  file  in  list_file:
+			link_save = link_folder + "/" + file.split('/')[3].split('.')[0]
+			os.makedirs(link_save,exist_ok=True)
+			read_mp4(link_save,file,cfg)
+
 if __name__ == "__main__":
 	preprocess()

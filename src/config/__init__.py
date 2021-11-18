@@ -1,1 +1,1 @@
-from .config import global_cfg, get_cfg, set_global_cfg
+from .config import global_cfg, get_cfg, set_global_cfg, get_cfg_cnn_lstm
